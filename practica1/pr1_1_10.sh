@@ -5,7 +5,7 @@ read -p "Introducir una cadena no vacia " cad
 
 if [ -d $dir ]
 then 
-  lsattr $dir
+  lsattr $dir | grep $cad
 else 
   echo "${dir} No es un directorio"
 fi
