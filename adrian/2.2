@@ -1,0 +1,84 @@
+2.2 Realizar la configuración de la red inalámbrica de forma permanente utilizando la linea de comandos.
+En sistemas operativos basados sobre CentOS, Fedora, Red Hat Enterprise Linux, openSUSE y SUSE Linux Enterprise, el primer paso consiste en cambiarse al usuario root:
+$ su -l
+Utilice sudo para todos los procedimientos en sistemas operativos basados sobre Ubuntu. Ejemplos:
+$ sudo ifup lo
+$ sudo iwconfig wlan0
+$ sudo iwlist wlan0 scan
+Debido a que seguramente el servicio NetworkManager hará conflicto con los procedimientos, se debe detener éste:
+$ service NetworkMananger stop
+Muchos componentes del sistema requieren que esté activa la interfaz de retorno del sistema (loopback), por lo que es importante iniciar ésta:
+$ ifup lo
+Ejecutar iwconfig con el nombre de la interfaz como argumento para comenzar a utilizar la interfaz Wifi. Ejemplo:
+$ iwconfig wlan0
+Es buena idea realizar un escaneado de las redes Wifi disponibles para asegurarse se puede acceder a la red Wifi deseada y para determinar el protocolo a utilizar:
+$ iwlist wlan0 scan
+Autenticando en el punto de acceso.
+A través de redes WEP.
+Para redes inalámbricas con autenticación a través de cifrado WEP, que se caracterizan por tener una seguridad muy pobre, el procedimiento es simple. Ejecute lo siguiente para definir el nombre del punto de acceso a utilizar:
+$ iwconfig wlan0 essid punto-de-acceso
+Ejecute lo siguiente para definir la contraseña a utilizar —puede ser de 64 o 128 bits.
+$ iwconfig wlan0 key contraseña
+Si se utiliza una clave WEP tipo ASCII, se define de la siguiente manera:
+$ iwconfig wlan0 key s:contraseña
+A través de redes WPA.
+Se procede a determinar el nombre de la red Wifi a utilizar y la contraseña. Ejecute wpa_passphrase con el nombre del punto de acceso y la contraseña cambiando la salida estándar para generar al archivo /root/wpa.conf:
+$ wpa_passphrase punto-de-acceso contraseña > /root/wpa.conf
+Si se realiza el procedimiento desde Ubuntu, lo anterior fallará debido a limitaciones de seguridad de sudo. En su lugar ejecute lo siguiente:
+$ sudo bash -c "wpa_passphrase punto-de-acceso contraseña > /root/wpa.conf"
+Ejecute wpa_supplicant con las opciones -B, para enviar el procesos a segundo plano -D, para especificar el controlador a utilizar y -c para especificar el archivo de configuración creado en el paso anterior e iniciar la autenticación hacia la red Wifi.
+$ wpa_supplicant -B -Dwext -iwlan0 -c/root/wpa.conf
+Configuración de valores de la interfaz de red.
+Utilizando dhclient.
+Lo más común es utilizar dhclient para dejar que el servidor DHCP del punto de acceso o la LAN se encargue de asignar los valores de red para la interfaz. Es buena idea indicar a dhclient que libere el préstamo que estuviera asignado en el servidor DHCP:
+$ dhclient -r
+Ejecute dhclient con el nombre de la interfaz WiFi como argumento para obtener una nueva dirección IP. Ejemplo:
+$ dhclient wlan0
+Asignación manual de los valores de la interfaz de red.
+Si se conocen los datos para la configuración de red, también es posible asignarlos manualmente. En el siguiente ejemplo, se asigna a la interfaz wlan0 la dirección IP 192.168.70.50, con máscara de subred 255.255.255.128 (25 bit) y puerta de enlace 192.168.70.1:
+$ ip addr add 192.168.70.50/25 dev wlan0
+$ ip route add default via 192.168.70.1 dev wlan0
+Edite el archivo /etc/resolv.conf y añada o modifique nameserver con la dirección IP del servidor DNS a utilizar como argumento. En el siguiente ejemplo se define 192.168.70.1 como servidor DNS:
+$ echo "nameserver 192.168.70.1" > /etc/resolv.conf
+Si se realiza el procedimiento desde Ubuntu, lo anterior fallará debido a limitaciones de seguridad de sudo. En su lugar ejecute lo siguiente:
+$ sudo bash -c "echo 'nameserver 192.168.70.1' > /etc/resolv.conf"
+Asignación permanente de valores de de la interfaz de red en CentOS, Fedora y Red Hat Enterprise Linux.
+Solo es necesario crear el archivo de interfaz, dentro de /etc/sysconfig/network-scripts/ siguiendo el siguiente formato:
+$ ifcfg-Auto_punto-de-acceso
+Como ejemplo, si se desea conectar el sistema a un punto de acceso denominado alcance2, se debe crear el archivo /etc/sysconfig/network-scripts/ifcfg-Auto_alcance2:
+$ vim /etc/sysconfig/network-scripts/ifcfg-Auto_alcance2
+Si se va a conectar a través de DHCP y utilizar cifrado WEP, poner el siguiente contenido:
+NAME="Auto alcance2"
+ONBOOT=yes
+TYPE=Wireless
+BOOTPROTO=dhcp
+ESSID=alcance2
+MODE=Managed
+SECURITY_MODE=open
+DEFAULTKEY=1
+PEERDNS=yes
+PEERROUTES=yes
+DHCP_CLIENT_ID=nombre-equipo
+DHCP_HOSTNAME=nombre-equipo
+Si se va a conectar a través de DHCP y utilizar cifrado WPA, poner el siguiente contenido:
+NAME="Auto alcance2"
+ONBOOT=yes
+TYPE=Wireless
+BOOTPROTO=dhcp
+ESSID=alcance2
+MODE=Managed
+KEY_MGMT=WPA-PSK
+PEERDNS=yes
+PEERROUTES=yes
+DHCP_CLIENT_ID=nombre-equipo
+DHCP_HOSTNAME=nombre-equipo
+Para la contraseña del punto de acceso, es necesario crear el archivo /etc/sysconfig/network-scripts/keys-Auto_alcance2:
+$ vim /etc/sysconfig/network-scripts/keys-Auto_alcance2
+Si se va a conectar por WEP, poner el siguiente contenido:
+$ KEY_PASSPHRASE1=contraseña
+Si se va a conectar por WPA, poner el siguiente contenido:
+$ WPA_PSK=clave-de-acceso
+Ejecute lo siguiente para iniciar la interfaz:
+$ ip link set wlan0 up
+Ejecute lo siguiente sólo si necesita detener la interfaz.
+$ ip link set wlan0 down
